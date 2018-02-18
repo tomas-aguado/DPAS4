@@ -1,0 +1,102 @@
+SEPALPLOTTER2
+========================================================
+author: Tomas
+date: 18 February 2018
+autosize: false
+width: 1440
+height: 900
+Intro and motivation
+========================================================
+
+This is perhaps the best known database to be found in the pattern recognition literature. Fisher's paper is a classic in the field and is referenced frequently to this day. (See Duda & Hart, for example.) The data set contains 3 classes of 50 instances each, where each class refers to a type of iris plant. One class is linearly separable from the other 2; the latter are NOT linearly separable from each other. 
+
+In this shiny application hosted in <https://akino.shinyapps.io/sepalplotter/> we've built a dynamic plotter that enables to interact whith the dataset in several ways: 
+
+- Change the graph type
+- Modify the sample size used for the visual representation
+- Modify the fields for X and Y fields
+- Change the fields used for color ramps
+- Change the graph geometry type
+- Represent a smooth representation of the values
+
+ui.R code
+========================================================
+```{r set-options, echo=FALSE, cache=FALSE}
+options(width = 10)
+```
+```{r, eval=FALSE}
+library(shiny)
+library(ggplot2)
+library(datasets)
+dataset <- iris
+shinyUI(pageWithSidebar(
+  titlePanel(title = h4("Iris dataset plotter ", align="center")),
+  sidebarPanel(
+    selectInput('GraphType', 'Graph type', c("Point","Histogram")),
+    sliderInput('sampleSize', 'Sample Size', min=10, max=nrow(dataset),
+                value=min(10, nrow(dataset)), step=5, round=0),
+    selectInput('x', 'X', names(dataset)),
+    selectInput('y', 'Y', names(dataset), names(dataset)[[2]]),
+    selectInput('color', 'Color', c('None', names(dataset))),
+    selectInput('geoType', 'GeometryType', c("Point","Line","Area","Box","Col","Density")),
+    checkboxInput('smooth', 'Smooth')
+  ),
+  mainPanel(
+    plotOutput('plot')
+  )
+))
+```
+
+Server.R code
+========================================================
+
+```{r, eval=FALSE}
+library(shiny) library(ggplot2) library(xml2) library(rvest) library(tidyr) library(dplyr) library(magrittr)
+shinyServer(function(input, output) {
+    dataset <- reactive( {iris[sample(nrow(iris), input$sampleSize),]})
+  output$plot <- reactivePlot(function() {
+    if (input$GraphType == 'Point'){
+    p <- ggplot(dataset(), aes_string(x=input$x, y=input$y)) + geom_point()
+    if (input$geoType == 'Point') p <- p + geom_point()  
+    else if (input$geoType == 'Line') p <- p + geom_line()
+    else if (input$geoType == 'Area') p <- p + geom_area()
+    else if (input$geoType == 'Box') p <- p + geom_boxplot()
+    else if (input$geoType == 'Col') p <- p + geom_col()
+    else if (input$geoType == 'Density')  p <- p + geom_density2d()   
+    else if (input$geoType == 'Area') p <- p + geom_area()
+    else if (input$geoType == 'Box') p <- p + geom_boxplot()  
+    if (input$color != 'None') p <- p + aes_string(color=input$color)
+    if (input$smooth) p <- p + geom_smooth()
+    print(p)
+    }else{histogram <- ggplot(dataset(), aes_string(x=input$x))
+      histogram + geom_histogram(binwidth=0.2, color="black", aes(fill=Species)) + 
+      xlab(input$x) +  ylab("Frequency") + ggtitle("Histogram of IRIS variables")
+    }  }, height=600  )})
+```
+
+Shiny app interface
+========================================================
+![my image](UI.png)
+
+The part of the interface surrounded by the green box contains all the controls which enable us to modify the different parameters of the plot, therefore, the plot appears within the render area contained by the red box.
+
+
+Slide With Plot examples (2)
+========================================================
+
+```{r, echo=FALSE}
+library(shiny)
+library(ggplot2)
+dataset <-  {
+      iris[sample(nrow(iris), 150),]
+  }
+histogram <- ggplot(dataset, aes_string(dataset$Sepal.Width))
+      histogram + geom_histogram(binwidth=0.2, color="black", aes(fill=Species)) + 
+        xlab("Sepal Width") +  ylab("Frequency") + ggtitle("Histogram of IRIS variables")
+      
+p <- ggplot(dataset, aes_string(x=dataset$Sepal.Length, y=dataset$Sepal.Width)) + geom_point() + geom_smooth() + geom_smooth() + geom_density2d()
+print(p)
+
+```
+
+
